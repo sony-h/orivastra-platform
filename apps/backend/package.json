@@ -8,7 +8,7 @@
     "build": "pnpm prisma:generate && nest build",
     "start": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm prisma:generate && tsc --noEmit",
     "clean": "rm -rf dist",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

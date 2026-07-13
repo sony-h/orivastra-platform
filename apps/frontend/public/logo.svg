@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32" fill="none">
+  <path d="M8 4L4 8L8 12L12 8L8 4Z" stroke="#2563EB" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M8 16L4 20L8 24L12 20L8 16Z" stroke="#2563EB" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M8 10L4 8L8 6L12 8L8 10Z" fill="#2563EB" fill-opacity="0.2"/>
+  <text x="24" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#0F172A" letter-spacing="-0.5">Orivastra</text>
+</svg>

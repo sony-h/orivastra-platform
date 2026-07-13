@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E3A5F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(80, 120)">
+    <path d="M40 0L0 40L40 80L80 40L40 0Z" stroke="#2563EB" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M40 50L0 40L40 30L80 40L40 50Z" fill="#2563EB" fill-opacity="0.3"/>
+    <path d="M40 160L0 200L40 240L80 200L40 160Z" stroke="#2563EB" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M40 210L0 200L40 190L80 200L40 210Z" fill="#2563EB" fill-opacity="0.3"/>
+  </g>
+  <text x="200" y="300" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="700" fill="#FFFFFF" letter-spacing="-2">Orivastra</text>
+  <text x="200" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#94A3B8">Building Intelligent Digital Solutions</text>
+</svg>

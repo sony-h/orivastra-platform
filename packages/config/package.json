@@ -1,0 +1,14 @@
+{
+  "name": "@orivastra/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./src/eslint/base.mjs",
+    "./tsconfig/base.json": "./src/tsconfig/base.json",
+    "./tsconfig/next.json": "./src/tsconfig/next.json"
+  },
+  "scripts": {
+    "clean": "rm -rf dist"
+  }
+}

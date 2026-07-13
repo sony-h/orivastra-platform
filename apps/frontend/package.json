@@ -1,0 +1,34 @@
+{
+  "name": "@orivastra/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next out"
+  },
+  "dependencies": {
+    "@orivastra/types": "workspace:*",
+    "@orivastra/ui": "workspace:*",
+    "@orivastra/utils": "workspace:*",
+    "framer-motion": "^12.6.0",
+    "lucide-react": "^0.487.0",
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@next/eslint-plugin-next": "^15.3.0",
+    "eslint": "^9.24.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.0"
+  }
+}

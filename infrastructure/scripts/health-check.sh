@@ -37,7 +37,7 @@ FAILED=0
 echo "[health-check] Verifying services..."
 
 # Check 1: Docker containers running
-# RUNNING=$(docker compose -f infrastructure/docker/docker-compose.yml ps --status running -q | wc -l)
+# RUNNING=$(docker compose -f infrastructure/compose/compose.prod.yml ps --status running -q | wc -l)
 # EXPECTED=5
 # if [ "${RUNNING}" -lt "${EXPECTED}" ]; then
 #   echo "[health-check] FAIL: Only ${RUNNING}/${EXPECTED} containers running"
@@ -65,7 +65,7 @@ echo "[health-check] Verifying services..."
 # fi
 
 # Check 4: PostgreSQL
-# if docker compose -f infrastructure/docker/docker-compose.yml exec -T postgres pg_isready -U orivastra > /dev/null 2>&1; then
+# if docker compose -f infrastructure/compose/compose.prod.yml exec -T postgres pg_isready -U orivastra > /dev/null 2>&1; then
 #   echo "[health-check] PASS: PostgreSQL accepting connections"
 # else
 #   echo "[health-check] FAIL: PostgreSQL not responding"
@@ -73,7 +73,7 @@ echo "[health-check] Verifying services..."
 # fi
 
 # Check 5: Redis
-# if docker compose -f infrastructure/docker/docker-compose.yml exec -T redis redis-cli PING | grep -q PONG; then
+# if docker compose -f infrastructure/compose/compose.prod.yml exec -T redis redis-cli PING | grep -q PONG; then
 #   echo "[health-check] PASS: Redis responding"
 # else
 #   echo "[health-check] FAIL: Redis not responding"

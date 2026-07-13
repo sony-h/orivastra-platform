@@ -28,8 +28,8 @@ LINES="${2:-50}"
 
 if [ -z "${SERVICE}" ]; then
   echo "[show-logs] Tailing all services (last ${LINES} lines)..."
-  # docker compose -f infrastructure/docker/docker-compose.yml logs --tail="${LINES}" -f
+  # docker compose -f infrastructure/compose/compose.prod.yml logs --tail="${LINES}" -f
 else
   echo "[show-logs] Tailing '${SERVICE}' (last ${LINES} lines)..."
-  # docker compose -f infrastructure/docker/docker-compose.yml logs --tail="${LINES}" -f "${SERVICE}"
+  # docker compose -f infrastructure/compose/compose.prod.yml logs --tail="${LINES}" -f "${SERVICE}"
 fi

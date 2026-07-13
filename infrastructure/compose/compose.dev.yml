@@ -1,0 +1,112 @@
+# ──────────────────────────────────────────────
+# Orivastra — Development Compose
+# ──────────────────────────────────────────────
+# Local development stack with hot-reload,
+# volume mounts, and exposed service ports.
+#
+# Usage:
+#   docker compose -f infrastructure/compose/compose.dev.yml up -d
+#
+#   Stop:
+#   docker compose -f infrastructure/compose/compose.dev.yml down
+#
+#   Rebuild after dependency changes:
+#   docker compose -f infrastructure/compose/compose.dev.yml build --no-cache
+# ──────────────────────────────────────────────
+
+services:
+  # ── Frontend (Next.js) ──────────────────────
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dockerfiles/frontend.Dockerfile
+      target: frontend-dev
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../..:/app
+      - /app/node_modules
+      - /app/apps/frontend/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    networks:
+      - orivastra
+
+  # ── Backend (NestJS) ────────────────────────
+  backend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dockerfiles/backend.Dockerfile
+      target: backend-dev
+    ports:
+      - '3001:3001'
+    volumes:
+      - ../..:/app
+      - /app/node_modules
+      - /app/apps/backend/dist
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://orivastra:orivastra_dev@postgres:5432/orivastra
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev_secret_change_me
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - orivastra
+
+  # ── PostgreSQL ──────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: orivastra
+      POSTGRES_PASSWORD: orivastra_dev
+      POSTGRES_DB: orivastra
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U orivastra']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orivastra
+
+  # ── Redis ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - orivastra
+
+  # ── Nginx ───────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - orivastra
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  orivastra:
+    driver: bridge

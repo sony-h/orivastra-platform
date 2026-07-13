@@ -1,0 +1,76 @@
+# ──────────────────────────────────────────────
+# Orivastra — AI Services Compose
+# ──────────────────────────────────────────────
+# Orchestrates AI agents and automation services.
+#
+# Services:
+#   hermes     AI DevOps agent that manages infrastructure
+#              via trusted scripts. Receives commands
+#              through Telegram and executes them safely.
+#
+#   openclaw   (Future) AI agent for code and workflow
+#              automation. Integrates with GitHub, Docker,
+#              and the Orivastra platform.
+#
+# The AI services share the orivastra network with
+# the main application stack. They need:
+#   - Access to Docker socket (limited)
+#   - Access to infrastructure scripts (volume mount)
+#   - Access to the orivastra network
+#   - Environment variables for API keys
+#
+# Usage:
+#   # Start alongside main stack:
+#   docker compose -f infrastructure/compose/compose.prod.yml \
+#                  -f infrastructure/compose/compose.ai.yml up -d
+#
+#   # AI services only:
+#   docker compose -f infrastructure/compose/compose.ai.yml up -d
+# ──────────────────────────────────────────────
+
+services:
+  # ── Hermes — AI DevOps Agent ────────────────
+  hermes:
+    build:
+      context: ../..
+      dockerfile: infrastructure/dockerfiles/hermes.Dockerfile
+      target: hermes-prod
+    container_name: orivastra-hermes
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    environment:
+      - NODE_ENV=production
+      # Future: API keys for AI services
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    volumes:
+      # Mount scripts so Hermes can execute them
+      - ../scripts:/app/infrastructure/scripts:ro
+      # Future: API socket for Docker management
+      # - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - orivastra
+    # Future: entrypoint that starts the agent process
+    # command: ["node", "apps/hermes/dist/main.js"]
+
+  # ── OpenClaw — Code & Workflow Agent (Future) ──
+  # openclaw:
+  #   build:
+  #     context: ../..
+  #     dockerfile: infrastructure/dockerfiles/openclaw.Dockerfile
+  #     target: openclaw-prod
+  #   container_name: orivastra-openclaw
+  #   restart: unless-stopped
+  #   env_file:
+  #     - ../env/.env
+  #   environment:
+  #     - NODE_ENV=production
+  #   volumes:
+  #     - ../scripts:/app/infrastructure/scripts:ro
+  #   networks:
+  #     - orivastra
+
+networks:
+  orivastra:
+    driver: bridge

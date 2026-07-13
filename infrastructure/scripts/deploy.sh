@@ -34,11 +34,11 @@ echo "[deploy] Pulling latest code from GitHub..."
 
 # Step 2: Build Docker images
 echo "[deploy] Building Docker images..."
-# docker compose -f infrastructure/docker/docker-compose.yml build
+# docker compose -f infrastructure/compose/compose.prod.yml build
 
 # Step 3: Restart services
 echo "[deploy] Restarting services..."
-# docker compose -f infrastructure/docker/docker-compose.yml up -d
+# docker compose -f infrastructure/compose/compose.prod.yml up -d
 
 # Step 4: Health check
 echo "[deploy] Running health check..."

@@ -40,7 +40,7 @@ echo "[backup-db] Creating ${MODE} backup..."
 # mkdir -p "${BACKUP_DIR}"
 
 # Dump the database from the running postgres container
-# docker compose -f infrastructure/docker/docker-compose.yml exec -T postgres \
+# docker compose -f infrastructure/compose/compose.prod.yml exec -T postgres \
 #   pg_dump -U orivastra orivastra | gzip > "${BACKUP_DIR}/${FILENAME}"
 
 echo "[backup-db] Backup saved: ${BACKUP_DIR}/${FILENAME}"

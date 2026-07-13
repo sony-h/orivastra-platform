@@ -22,7 +22,7 @@ set -euo pipefail
 echo "[restart-backend] Restarting backend..."
 
 # Restart the backend container
-# docker compose -f infrastructure/docker/docker-compose.yml restart backend
+# docker compose -f infrastructure/compose/compose.prod.yml restart backend
 
 # Wait for the service to become healthy
 # sleep 5

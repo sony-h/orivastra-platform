@@ -21,7 +21,7 @@ set -euo pipefail
 echo "[restart-frontend] Restarting frontend..."
 
 # Restart the frontend container
-# docker compose -f infrastructure/docker/docker-compose.yml restart frontend
+# docker compose -f infrastructure/compose/compose.prod.yml restart frontend
 
 # Wait for the service to become healthy
 # sleep 3

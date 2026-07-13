@@ -19,9 +19,8 @@ Applications (`apps/`) contain business logic. Infrastructure contains deploymen
 
 ```
 infrastructure/
-├── compose/               # Docker Compose files (future: dev, staging, prod overrides)
-├── dockerfiles/           # Dockerfiles per application (future: organized build contexts)
-├── docker/                # Current Docker Compose + Dockerfiles (will migrate to above)
+├── compose/               # Docker Compose files per environment (dev, prod, ai)
+├── dockerfiles/           # Multi-stage Dockerfiles per application
 ├── env/                   # Environment variable templates (never commit real secrets)
 ├── nginx/                 # Nginx reverse proxy configuration
 ├── postgres/              # Database initialization scripts
@@ -177,14 +176,13 @@ User: "Deploy the latest version"
 
 ## Current State (v0.1)
 
-- [x] Docker Compose with 5 services (frontend, backend, postgres, redis, nginx)
-- [x] Multi-stage Dockerfiles (frontend dev + prod, backend dev)
+- [x] Docker Compose files: dev, prod, ai (compose/)
+- [x] Multi-stage Dockerfiles: frontend, backend, hermes (dockerfiles/)
 - [x] Nginx reverse proxy configuration
-- [x] Environment variable templates
-- [x] Operational scripts (placeholders with future implementation guides)
+- [x] Environment variable templates (dev, prod, example)
+- [x] Operational scripts (7 scripts with Hermes integration notes)
 - [ ] SSL/TLS certificates (Let's Encrypt + Certbot)
 - [ ] Monitoring stack (Prometheus + Grafana)
-- [ ] Production backend Dockerfile (multi-stage optimization)
 - [ ] Redis custom configuration
 - [ ] Automated backup rotation
 - [ ] GitHub Actions CI/CD deployment pipeline

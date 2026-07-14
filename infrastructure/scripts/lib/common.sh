@@ -9,6 +9,10 @@
 #   source "$(dirname "$0")/lib/common.sh"
 # ──────────────────────────────────────────────
 
+# Prevent multiple sourcing
+[[ -n "${ORIVASTRA_COMMON_LOADED:-}" ]] && return
+readonly ORIVASTRA_COMMON_LOADED=1
+
 set -Eeuo pipefail
 
 # ── Colors ───────────────────────────────────

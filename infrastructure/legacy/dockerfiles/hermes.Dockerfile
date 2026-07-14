@@ -33,7 +33,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY package.json ./
 
 # Install core workspace tools
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.13.0 --activate
 
 # Copy any app-specific config if hermes package exists
 # COPY apps/hermes/package.json ./apps/hermes/  # Future

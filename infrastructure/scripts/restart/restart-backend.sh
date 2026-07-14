@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────
-# restart-backend.sh — Restart Backend via PM2
+# restart-backend.sh — Restart Backend
 # ──────────────────────────────────────────────
 # Gracefully restarts the backend PM2 process.
-# Used after config changes or routine maintenance
-# without full redeployment.
+# Faster than a full deploy for config changes
+# or routine maintenance.
 #
 # Usage:
-#   ./restart-backend.sh
-#
-# Future (Hermes integration):
-#   Triggered by Hermes via Telegram command.
+#   ./restart/restart-backend.sh
 # ──────────────────────────────────────────────
 
-set -euo pipefail
+set -Eeuo pipefail
 
-echo "[restart-backend] Restarting backend..."
-pm2 restart backend
-echo "[restart-backend] Backend restarted."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+source "$SCRIPT_DIR/../lib/pm2.sh"
+
+if [[ "${1:-}" = "--help" ]] || [[ "${1:-}" = "-h" ]]; then
+  sed -n '/^#/p' "$0" | sed 's/^# //; s/^#$//'
+  exit 0
+fi
+
+pm2_restart_backend

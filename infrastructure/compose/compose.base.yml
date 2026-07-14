@@ -1,0 +1,18 @@
+# ──────────────────────────────────────────────
+# Orivastra — Shared Infrastructure
+# ──────────────────────────────────────────────
+# Networks and named volumes shared across
+# all environments (dev, prod, ai).
+#
+# Each environment compose file includes this
+# and defines its own services with env-specific
+# configuration.
+# ──────────────────────────────────────────────
+
+networks:
+  orivastra:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

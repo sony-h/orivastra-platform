@@ -2,31 +2,27 @@
 # Orivastra — AI Services Compose
 # ──────────────────────────────────────────────
 # Orchestrates AI agents and automation services.
+# Runs alongside the production stack on the
+# shared orivastra network.
 #
 # Services:
-#   hermes     AI DevOps agent that manages infrastructure
-#              via trusted scripts. Receives commands
-#              through Telegram and executes them safely.
+#   hermes     AI DevOps agent that manages
+#              infrastructure via trusted scripts.
 #
-#   openclaw   (Future) AI agent for code and workflow
-#              automation. Integrates with GitHub, Docker,
-#              and the Orivastra platform.
-#
-# The AI services share the orivastra network with
-# the main application stack. They need:
-#   - Access to Docker socket (limited)
-#   - Access to infrastructure scripts (volume mount)
-#   - Access to the orivastra network
-#   - Environment variables for API keys
+#   openclaw   (Future) AI agent for code and
+#              workflow automation.
 #
 # Usage:
-#   # Start alongside main stack:
+#   # Start alongside production:
 #   docker compose -f infrastructure/compose/compose.prod.yml \
 #                  -f infrastructure/compose/compose.ai.yml up -d
 #
 #   # AI services only:
 #   docker compose -f infrastructure/compose/compose.ai.yml up -d
 # ──────────────────────────────────────────────
+
+include:
+  - compose.base.yml
 
 services:
   # ── Hermes — AI DevOps Agent ────────────────
@@ -45,14 +41,11 @@ services:
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
       # - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     volumes:
-      # Mount scripts so Hermes can execute them
       - ../scripts:/app/infrastructure/scripts:ro
-      # Future: API socket for Docker management
+      # Future: Docker socket for container management
       # - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - orivastra
-    # Future: entrypoint that starts the agent process
-    # command: ["node", "apps/hermes/dist/main.js"]
 
   # ── OpenClaw — Code & Workflow Agent (Future) ──
   # openclaw:
@@ -70,7 +63,3 @@ services:
   #     - ../scripts:/app/infrastructure/scripts:ro
   #   networks:
   #     - orivastra
-
-networks:
-  orivastra:
-    driver: bridge

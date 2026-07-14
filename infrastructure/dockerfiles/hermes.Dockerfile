@@ -23,7 +23,7 @@
 #   docker build -f infrastructure/dockerfiles/hermes.Dockerfile .
 # ──────────────────────────────────────────────
 
-FROM node:24-alpine AS hermes-base
+FROM node:22-alpine AS hermes-base
 WORKDIR /app
 
 RUN apk add --no-cache curl git openssh bash

@@ -3,63 +3,76 @@
 # ──────────────────────────────────────────────
 # Multi-stage build for the NestJS backend.
 #
-# Key design: same pnpm wrapper pattern as
-# frontend.Dockerfile to handle pnpm v11's
-# internal dep check that re-runs pnpm install
-# without --ignore-scripts.
+# Stage design:
+#   base       Node.js + corepack
+#   deps       package.json files → pnpm install
+#   builder    Source → prisma generate → nest build
+#              → pnpm deploy (production deps)
+#   runner     Minimal production image, non-root
+#   dev        Shared deps, volume-mounted source
+#
+# Builder uses `node` with resolved paths from
+# the pnpm virtual store to invoke prisma/nest
+# directly, bypassing pnpm v11's runDepsStatusCheck.
+#
+# pnpm deploy creates the production dependency
+# tree. dist/ and .prisma/client/ are gitignored
+# so pnpm deploy excludes them — copied manually.
 #
 # Build:
 #   docker build -f infrastructure/dockerfiles/backend.Dockerfile .
 # ──────────────────────────────────────────────
 
-# ── Base (shared deps) ────────────────────────
-FROM node:24-alpine AS backend-base
+FROM node:22-alpine AS base
 WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@11.13.0 --activate
 
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
-
-# pnpm wrapper: forces --ignore-scripts on all install calls
-# that pnpm's internal dependency check spawns
-RUN mv /usr/local/bin/pnpm /usr/local/bin/pnpm-real && \
-    printf '#!/bin/sh\nset -e\ncase "$*" in\n  install*)\n    exec /usr/local/bin/pnpm-real "$$@" --ignore-scripts\n    ;;\n  *)\n    exec /usr/local/bin/pnpm-real "$$@"\n    ;;\nesac\n' > /usr/local/bin/pnpm && \
-    chmod +x /usr/local/bin/pnpm
-
+# ── Dependencies ──────────────────────────────
+FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY package.json turbo.json tsconfig.base.json ./
 COPY apps/backend/package.json ./apps/backend/
+COPY packages/config/package.json ./packages/config/
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# ── Development ───────────────────────────────
-FROM backend-base AS backend-dev
-COPY . .
-ENV NODE_ENV=development
-EXPOSE 3001
-CMD ["pnpm", "--filter", "@orivastra/backend", "dev"]
-
 # ── Builder ───────────────────────────────────
-FROM backend-base AS backend-builder
+FROM deps AS builder
 COPY . .
 ENV NODE_ENV=production
 
-RUN pnpm --filter @orivastra/backend build
+RUN cd apps/backend && \
+    PRISMA_BIN=$(find /app/node_modules/.pnpm \( -name prisma -o -name prisma.js \) -not -path "*/node_modules/.bin/*" 2>/dev/null | head -1) && \
+    node "$PRISMA_BIN" generate
 
-# Deploy with production deps only
-RUN pnpm deploy --filter @orivastra/backend --prod /deploy
-# dist/ is gitignored — pnpm deploy excludes it. Copy manually.
-RUN cp -r /app/apps/backend/dist /deploy/dist
-# Generated Prisma client (.prisma/client/) lives inside the pnpm virtual
-# store, not in the deploy output. Copy it so @prisma/client works at runtime.
-RUN mkdir -p /deploy/node_modules/.prisma && \
-    cp -rL /app/apps/backend/node_modules/.prisma/client /deploy/node_modules/.prisma/client
+RUN cd apps/backend && \
+    NEST_BIN=$(find /app/node_modules/.pnpm \( -name nest -o -name nest.js \) -not -path "*/node_modules/.bin/*" 2>/dev/null | head -1) && \
+    node "$NEST_BIN" build
 
-# ── Production ────────────────────────────────
-FROM node:24-alpine AS backend-prod
+# ── Runner (production) ──────────────────────
+FROM node:22-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-COPY --from=backend-builder /deploy ./
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
+COPY --from=builder --chown=nextjs:nodejs /app/apps/backend/dist ./dist
+COPY --from=builder --chown=nextjs:nodejs /app/apps/backend/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/apps/backend/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+USER nextjs
 EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3001/health',function(r){process.exit(r.statusCode===200?0:1)})"
+
 CMD ["node", "dist/main.js"]
+
+# ── Development ──────────────────────────────
+FROM deps AS backend-dev
+ENV NODE_ENV=development
+WORKDIR /app/apps/backend
+EXPOSE 3001
+CMD ["pnpm", "dev"]

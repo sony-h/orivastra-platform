@@ -15,7 +15,19 @@
 #   Username: orivastra
 #   Password: orivastra_dev
 #   Database: orivastra
+#
+# Volume mount strategy:
+#   The entire monorepo is mounted at /app so that
+#   workspace packages (@orivastra/ui, etc.) are
+#   resolvable for the frontend build. Anonymous
+#   volumes protect /app/node_modules from host
+#   contamination. Cross-platform symlink issues
+#   (Windows → Linux) are a known trade-off —
+#   use WSL2 for development to avoid them.
 # ──────────────────────────────────────────────
+
+include:
+  - compose.base.yml
 
 services:
   # ── Frontend (Next.js) ──────────────────────
@@ -103,11 +115,3 @@ services:
         condition: service_healthy
     networks:
       - orivastra
-
-volumes:
-  postgres_data:
-  redis_data:
-
-networks:
-  orivastra:
-    driver: bridge

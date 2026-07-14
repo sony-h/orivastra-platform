@@ -3,48 +3,51 @@
 # ──────────────────────────────────────────────
 # Multi-stage build for the Next.js frontend.
 #
-# Stages:
-#   frontend-base     Shared dependencies install (pnpm workspace)
-#   frontend-dev      Development with Turbopack hot-reload
-#   frontend-builder  Production build (next build)
-#   frontend-prod     Minimal production image with standalone output
+# Key design: pnpm v11 runs `pnpm install` as a
+# dependency check before every --filter command.
+# This internal install does NOT respect --ignore-scripts
+# and fails on ERR_PNPM_IGNORED_BUILDS in Docker.
 #
-# Build contexts:
-#   Context must be the monorepo root (../..)
+# Fix: a wrapper script intercepts `pnpm install`
+# calls from the dep check and appends --ignore-scripts.
+#
+# Build:
 #   docker build -f infrastructure/dockerfiles/frontend.Dockerfile .
 # ──────────────────────────────────────────────
 
+# ── Base (shared deps) ────────────────────────
 FROM node:24-alpine AS frontend-base
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
-# Copy workspace root configs — these change rarely, good for layer caching
-COPY pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY package.json turbo.json tsconfig.base.json ./
+# pnpm wrapper: forces --ignore-scripts on all install calls
+# that pnpm's internal dependency check spawns
+RUN mv /usr/local/bin/pnpm /usr/local/bin/pnpm-real && \
+    printf '#!/bin/sh\nset -e\ncase "$*" in\n  install*)\n    exec /usr/local/bin/pnpm-real "$$@" --ignore-scripts\n    ;;\n  *)\n    exec /usr/local/bin/pnpm-real "$$@"\n    ;;\nesac\n' > /usr/local/bin/pnpm && \
+    chmod +x /usr/local/bin/pnpm
 
-# Copy only package.json files for dependency installation
+COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json turbo.json tsconfig.base.json ./
 COPY apps/frontend/package.json ./apps/frontend/
-COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/utils/package.json ./packages/utils/
 
-RUN pnpm install --frozen-lockfile
-
-# Now copy the full source
-COPY . .
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # ── Development ───────────────────────────────
 FROM frontend-base AS frontend-dev
+COPY . .
 ENV NODE_ENV=development
 EXPOSE 3000
 CMD ["pnpm", "--filter", "@orivastra/frontend", "dev"]
 
-# ── Build ─────────────────────────────────────
+# ── Builder ───────────────────────────────────
 FROM frontend-base AS frontend-builder
+COPY . .
 ENV NODE_ENV=production
-RUN pnpm build --filter @orivastra/frontend
+RUN pnpm --filter @orivastra/frontend build
 
 # ── Production ────────────────────────────────
 FROM node:24-alpine AS frontend-prod
@@ -53,7 +56,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy standalone output from builder
 COPY --from=frontend-builder /app/apps/frontend/.next/standalone ./
 COPY --from=frontend-builder /app/apps/frontend/.next/static ./apps/frontend/.next/static
 COPY --from=frontend-builder /app/apps/frontend/public ./apps/frontend/public

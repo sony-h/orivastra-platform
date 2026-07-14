@@ -1,45 +1,47 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────
-# rollback.sh — Emergency Rollback
+# rollback.sh — Production Rollback
 # ──────────────────────────────────────────────
-# Purpose:
-#   Reverts the production stack to a previous
-#   known-good state after a failed deployment.
-#
-# Strategy:
-#   1. Checkout the previous Git tag or commit hash
-#   2. Rebuild Docker images from that point
-#   3. Restart services
-#   4. Verify with health-check.sh
+# Reverts the repository to a previous commit,
+# rebuilds the affected application, and restarts.
 #
 # Usage:
-#   ./rollback.sh            # rollback to previous commit
-#   ./rollback.sh v0.1.0     # rollback to a specific tag
+#   ./rollback.sh                          # Rollback to previous commit
+#   ./rollback.sh <commit-hash>            # Rollback to specific commit
 #
 # Future (Hermes integration):
-#   Triggered automatically when health-check.sh
-#   fails after a deploy. Hermes calls rollback.sh
-#   without human intervention.
-#
-#   Telegram → Hermes → health-check fails → rollback.sh
+#   Hermes calls this after deploy.sh if
+#   health-check.sh fails.
 # ──────────────────────────────────────────────
 
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 TARGET="${1:-HEAD~1}"
+
+cd "$ROOT_DIR"
 
 echo "[rollback] Rolling back to: ${TARGET}"
 
-# Step 1: Checkout target
-# git checkout "${TARGET}"
+if git diff --cached --quiet && git diff --quiet; then
+  git reset --hard "$TARGET"
+else
+  echo "[rollback] Uncommitted changes detected. Stashing..."
+  git stash --include-untracked
+  git reset --hard "$TARGET"
+fi
 
-# Step 2: Rebuild
-# docker compose -f infrastructure/compose/compose.prod.yml build
+echo "[rollback] Rebuilding backend..."
+turbo build --filter=@orivastra/backend
 
-# Step 3: Restart
-# docker compose -f infrastructure/compose/compose.prod.yml up -d
+echo "[rollback] Rebuilding frontend..."
+turbo build --filter=@orivastra/frontend
 
-# Step 4: Verify
-# ./health-check.sh
+echo "[rollback] Restarting services..."
+pm2 restart backend
+pm2 restart frontend
 
-echo "[rollback] Rollback complete. Now running: ${TARGET}"
+echo "[rollback] Running health check..."
+"$(dirname "$0")/health-check.sh"
+
+echo "[rollback] Rollback complete."

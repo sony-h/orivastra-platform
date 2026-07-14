@@ -129,15 +129,36 @@ EC2 can later become Kubernetes.
 
 ---
 
-## Containerized
+## Hybrid Infrastructure
 
-Every application should run inside Docker.
+Applications run natively on the host via PM2.
+
+Infrastructure services (PostgreSQL, Redis) run inside Docker.
+
+This hybrid approach balances simplicity, performance, and portability.
+
+### Why applications are native
+
+- Faster builds and restarts (no Docker overhead)
+- Simpler debugging (`pm2 logs`, `curl localhost`)
+- pnpm workspaces work naturally without volume mount issues
+- Same commands work locally (WSL), on CI (GitHub Actions), and on the VPS
+
+### Why infrastructure uses Docker
+
+- PostgreSQL and Redis are self-contained, version-pinned, and portable across environments
+- Backups and health checks use standard Docker commands
+- Infrastructure can be swapped (e.g., RDS, ElastiCache) without application changes
+
+### Future migration
+
+If containerization becomes necessary for applications (Kubernetes, ECS, etc.), the preserved Dockerfiles in `infrastructure/legacy/dockerfiles/` can be reactivated.
 
 The VPS should never become the development environment.
 
 Development happens locally.
 
-Deployment happens through Docker.
+Deployment happens through PM2 and Docker Compose.
 
 ---
 
@@ -271,10 +292,6 @@ Developer
 
 ↓
 
-VS Code
-
-↓
-
 Git
 
 ↓
@@ -287,11 +304,24 @@ AWS VPS
 
 ↓
 
-Docker Compose
+git pull
+
+↓
+
+pnpm install
+
+↓
+
+turbo build
+
+↓
+
+PM2 Restart
 
 ↓
 
 Production
+
 ```
 
 Development should never occur directly on the VPS.
@@ -301,30 +331,26 @@ Development should never occur directly on the VPS.
 # 6. Deployment Workflow
 
 ```
-Local Development
-
+Windows (WSL)
 ↓
-
+VS Code
+↓
 Git Commit
-
 ↓
-
 GitHub
-
 ↓
-
-Pull to VPS
-
+AWS VPS
 ↓
-
-Docker Build
-
+git pull
 ↓
-
-Docker Compose
-
+pnpm install
 ↓
-
+turbo build
+↓
+PM2 Restart
+↓
+Docker Infrastructure (PostgreSQL, Redis)
+↓
 Production
 ```
 

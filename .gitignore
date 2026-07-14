@@ -47,3 +47,9 @@ coverage/
 # misc
 *.pem
 .cache/
+
+# logs (PM2)
+logs/
+
+# pnpm store (generated, not part of project)
+.pnpm-store/

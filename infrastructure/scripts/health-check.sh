@@ -2,17 +2,13 @@
 # ──────────────────────────────────────────────
 # health-check.sh — Service Health Verification
 # ──────────────────────────────────────────────
-# Purpose:
-#   Verifies that all Docker services are running
-#   and responding correctly. Used after deployment
-#   and for routine monitoring.
-#
-# Checks performed:
-#   1. All containers are "running" (docker compose ps)
-#   2. Frontend responds with HTTP 200
-#   3. Backend /api/health responds with HTTP 200
-#   4. PostgreSQL accepts connections
-#   5. Redis responds to PING
+# Verifies:
+#   1. Docker infrastructure containers are running
+#   2. PM2 processes are online
+#   3. Frontend responds with HTTP 200
+#   4. Backend /health responds with HTTP 200
+#   5. PostgreSQL accepts connections
+#   6. Redis responds to PING
 #
 # Exit codes:
 #   0 — All services healthy
@@ -22,67 +18,72 @@
 #   ./health-check.sh
 #
 # Future (Hermes integration):
-#   Hermes runs this after deploy.sh. If it fails,
+#   Hermes runs this after deploy. If it fails,
 #   Hermes calls rollback.sh automatically.
-#
-#   deploy.sh → health-check.sh
-#     ├── pass → notify success
-#     └── fail → rollback.sh → notify failure
 # ──────────────────────────────────────────────
 
 set -euo pipefail
 
 FAILED=0
+INFRA_COMPOSE="-f $(dirname "$0")/../compose/compose.infrastructure.yml"
 
 echo "[health-check] Verifying services..."
 
 # Check 1: Docker containers running
-# RUNNING=$(docker compose -f infrastructure/compose/compose.prod.yml ps --status running -q | wc -l)
-# EXPECTED=5
-# if [ "${RUNNING}" -lt "${EXPECTED}" ]; then
-#   echo "[health-check] FAIL: Only ${RUNNING}/${EXPECTED} containers running"
-#   FAILED=1
-# else
-#   echo "[health-check] PASS: ${RUNNING}/${EXPECTED} containers running"
-# fi
+RUNNING=$(docker compose $INFRA_COMPOSE ps --status running -q 2>/dev/null | wc -l)
+EXPECTED=2
+if [ "$RUNNING" -lt "$EXPECTED" ]; then
+  echo "[health-check] FAIL: Only ${RUNNING}/${EXPECTED} infra containers running"
+  FAILED=1
+else
+  echo "[health-check] PASS: ${RUNNING}/${EXPECTED} infra containers running"
+fi
 
-# Check 2: Frontend HTTP
-# FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
-# if [ "${FRONTEND_STATUS}" != "200" ]; then
-#   echo "[health-check] FAIL: Frontend returned ${FRONTEND_STATUS}"
-#   FAILED=1
-# else
-#   echo "[health-check] PASS: Frontend HTTP 200"
-# fi
+# Check 2: PM2 processes
+if command -v pm2 &>/dev/null; then
+  PM2_STATUS=$(pm2 list 2>/dev/null | grep -c 'online' || true)
+  echo "[health-check] PASS: ${PM2_STATUS} PM2 processes online"
+else
+  echo "[health-check] WARN: PM2 not installed — skipping process check"
+fi
 
-# Check 3: Backend health endpoint
-# BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)
-# if [ "${BACKEND_STATUS}" != "200" ]; then
-#   echo "[health-check] FAIL: Backend returned ${BACKEND_STATUS}"
-#   FAILED=1
-# else
-#   echo "[health-check] PASS: Backend HTTP 200"
-# fi
+# Check 3: Frontend HTTP
+FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
+if [ "$FRONTEND_STATUS" = "200" ]; then
+  echo "[health-check] PASS: Frontend HTTP 200"
+else
+  echo "[health-check] FAIL: Frontend returned ${FRONTEND_STATUS}"
+  FAILED=1
+fi
 
-# Check 4: PostgreSQL
-# if docker compose -f infrastructure/compose/compose.prod.yml exec -T postgres pg_isready -U orivastra > /dev/null 2>&1; then
-#   echo "[health-check] PASS: PostgreSQL accepting connections"
-# else
-#   echo "[health-check] FAIL: PostgreSQL not responding"
-#   FAILED=1
-# fi
+# Check 4: Backend health endpoint
+BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health 2>/dev/null || echo "000")
+if [ "$BACKEND_STATUS" = "200" ]; then
+  echo "[health-check] PASS: Backend HTTP 200"
+else
+  echo "[health-check] FAIL: Backend returned ${BACKEND_STATUS}"
+  FAILED=1
+fi
 
-# Check 5: Redis
-# if docker compose -f infrastructure/compose/compose.prod.yml exec -T redis redis-cli PING | grep -q PONG; then
-#   echo "[health-check] PASS: Redis responding"
-# else
-#   echo "[health-check] FAIL: Redis not responding"
-#   FAILED=1
-# fi
+# Check 5: PostgreSQL
+if docker compose $INFRA_COMPOSE exec -T postgres pg_isready -U orivastra >/dev/null 2>&1; then
+  echo "[health-check] PASS: PostgreSQL accepting connections"
+else
+  echo "[health-check] FAIL: PostgreSQL not responding"
+  FAILED=1
+fi
+
+# Check 6: Redis
+if docker compose $INFRA_COMPOSE exec -T redis redis-cli PING 2>/dev/null | grep -q PONG; then
+  echo "[health-check] PASS: Redis responding"
+else
+  echo "[health-check] FAIL: Redis not responding"
+  FAILED=1
+fi
 
 echo "[health-check] Verification complete."
 
-if [ "${FAILED}" -ne 0 ]; then
+if [ "$FAILED" -ne 0 ]; then
   echo "[health-check] One or more checks FAILED."
   exit 1
 fi

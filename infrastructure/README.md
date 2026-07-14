@@ -1,7 +1,7 @@
 # Orivastra — Infrastructure
 
-Version: 0.1
-Status: Foundation
+Version: 0.2
+Status: Hybrid Architecture
 
 ---
 
@@ -9,9 +9,39 @@ Status: Foundation
 
 This directory owns everything related to deployment, containerization, networking, and server operations.
 
-Applications (`apps/`) contain business logic. Infrastructure contains deployment logic.
+**Applications** (`apps/`) contain business logic. **Infrastructure** contains deployment logic. They should never be mixed.
 
-**They should never be mixed.**
+---
+
+## Architecture Philosophy — Hybrid Infrastructure
+
+Orivastra uses a **hybrid infrastructure**:
+
+| Layer              | Technology               | Responsibility                       |
+| ------------------ | ------------------------ | ------------------------------------ |
+| **Applications**   | PM2 native processes     | Frontend (Next.js), Backend (NestJS) |
+| **Infrastructure** | Docker containers        | PostgreSQL, Redis, Adminer           |
+| **Proxy**          | Nginx (native package)   | Reverse proxy, TLS termination       |
+| **Deployment**     | Git + pnpm + turbo + PM2 | Pull, build, restart                 |
+
+### Why applications are native
+
+- **Simplicity**: No Dockerfile complexity for pnpm workspace builds. No volume mount issues. No `COPY` symlink problems. Builds run directly with `pnpm install && turbo build`.
+- **Performance**: Native processes start and restart in milliseconds. No Docker daemon overhead.
+- **Debugging**: `pm2 logs`, `curl localhost`, `journalctl` — standard Linux tools. No `docker exec`.
+- **CI compatibility**: Same commands work on GitHub Actions, local WSL, and the VPS. No Docker-in-Docker needed.
+- **Future Hermes integration**: Hermes calls PM2 commands and trusted scripts directly, without wrapping every action in Docker API calls.
+
+### Why infrastructure uses Docker
+
+- **Isolation**: PostgreSQL and Redis are self-contained, need no orchestration, and benefit from Docker's predictable environment.
+- **Portability**: Same PostgreSQL version across all environments (dev, CI, prod).
+- **Maintainability**: Backups, restarts, health checks via Docker CLI or compose. No manual PostgreSQL installation.
+- **Replacement**: Infrastructure services can be swapped (e.g., PostgreSQL → RDS, Redis → ElastiCache) without changing application code.
+
+### Future migration path
+
+If containerization becomes necessary for applications in the future (e.g., Kubernetes, ECS, scaling requirements), the Dockerfiles in `legacy/dockerfiles/` can be reactivated. The current PM2-based deployment is designed to coexist with or transition to full containerization.
 
 ---
 
@@ -19,171 +49,238 @@ Applications (`apps/`) contain business logic. Infrastructure contains deploymen
 
 ```
 infrastructure/
-├── compose/               # Docker Compose files per environment (dev, prod, ai)
-├── dockerfiles/           # Multi-stage Dockerfiles per application
-├── env/                   # Environment variable templates (never commit real secrets)
-├── nginx/                 # Nginx reverse proxy configuration
-├── postgres/              # Database initialization scripts
-├── redis/                 # Redis configuration (future: custom redis.conf)
-├── scripts/               # Operational scripts for deployment and maintenance
-└── README.md              # This file
+├── compose/
+│   ├── compose.infrastructure.yml    # Docker infra services (PostgreSQL, Redis, Adminer)
+│   └── compose.ai.yml                # Future AI services placeholder
+├── legacy/
+│   └── dockerfiles/                  # Preserved Dockerfiles (frontend, backend, hermes)
+├── env/
+│   ├── .env.example                  # Infra-only env template
+│   ├── .env.development              # Local dev values for infra
+│   └── .env.production.example       # Production infra template
+├── nginx/
+│   └── default.conf                  # Reverse proxy configuration
+├── postgres/
+│   └── init.sql                      # Database initialization
+├── redis/                            # Future Redis configuration
+├── scripts/
+│   ├── deploy-backend.sh             # Pull → install → build → restart backend
+│   ├── deploy-frontend.sh            # Pull → install → build → restart frontend
+│   ├── restart-all.sh                # Gracefully restart both apps + health check
+│   ├── restart-backend.sh            # PM2 restart backend
+│   ├── restart-frontend.sh           # PM2 restart frontend
+│   ├── health-check.sh               # Verify infra services + PM2 + HTTP endpoints
+│   ├── backup-db.sh                  # Create PostgreSQL dump
+│   └── rollback.sh                   # Git revert + rebuild + redeploy
+└── README.md                         # This file
 ```
 
 ---
 
-## Deployment Philosophy
+## Deployment Workflow
 
-### Development Happens Locally
+### Full Backend Deployment
 
-Coding, testing, and debugging happen on your laptop. Docker is used for running services (PostgreSQL, Redis) during development, but the applications themselves run via `pnpm dev` for fast iteration.
+```bash
+# 1. Backup database
+./infrastructure/scripts/backup-db.sh
 
-### Deployment Happens on the VPS
-
-The AWS EC2 instance is a deployment target, NOT a development machine. No editors, no build tools, no source modification happens on the VPS. It runs containers and nothing else.
-
-### Workflow
-
-```
-Developer Laptop
-    │
-    ├── git commit
-    ├── git push
-    │
-    ▼
-GitHub
-    │
-    ├── (future) GitHub Actions CI/CD
-    │
-    ▼
-AWS EC2 (VPS)
-    │
-    ├── git pull
-    ├── docker compose build
-    ├── docker compose up -d
-    │
-    ▼
-Production
+# 2. Deploy backend
+./infrastructure/scripts/deploy-backend.sh
+#   → git pull origin main
+#   → pnpm install --frozen-lockfile
+#   → turbo build --filter=@orivastra/backend
+#   → pm2 restart backend
+#   → health-check.sh
 ```
 
-**Future:** Manual `git pull` on the VPS will be replaced by GitHub Actions that automatically deploy on merge to `main`.
+### Full Frontend Deployment
+
+```bash
+./infrastructure/scripts/deploy-frontend.sh
+```
+
+### Quick Restart
+
+```bash
+./infrastructure/scripts/restart-all.sh    # Both apps + health check
+./infrastructure/scripts/restart-backend.sh # Backend only
+./infrastructure/scripts/restart-frontend.sh # Frontend only
+```
+
+### Rollback
+
+```bash
+./infrastructure/scripts/rollback.sh              # Previous commit
+./infrastructure/scripts/rollback.sh <commit-hash> # Specific commit
+```
 
 ---
 
-## Docker Philosophy
+## PM2 Philosophy
 
-1. **Every application runs in its own container.** Frontend, backend, database, cache — all containerized.
-2. **Docker networks isolate internal services.** PostgreSQL and Redis are never exposed to the public internet. Only Nginx listens on ports 80/443.
-3. **Secrets come from environment variables.** Never hardcoded in Dockerfiles or compose files. Use `.env` files on the server.
-4. **Images are built from the monorepo root.** Because `pnpm` workspaces need the full monorepo context, Dockerfiles build from the repository root, not individual app directories.
-5. **Development and production use different Docker targets.** The same Dockerfile supports `dev` (hot-reload, volume mounts) and `prod` (optimized, standalone) targets.
+**PM2 is the application process manager.** It runs the frontend and backend as native processes on the VPS.
+
+| Aspect            | Approach                                                            |
+| ----------------- | ------------------------------------------------------------------- |
+| **Installation**  | `npm install -g pm2` on the VPS (once, not per-project)             |
+| **Configuration** | `ecosystem.config.js` at the repository root (committed)            |
+| **Environment**   | Env vars from `/etc/orivastra.env` (never committed)                |
+| **Startup**       | `pm2 startup systemd` — registers with systemd, auto-starts on boot |
+| **Restart**       | `pm2 restart <name>` — graceful, respects `kill_timeout`            |
+| **Logs**          | `pm2 logs <name>` — rotated files in `~/.pm2/logs/`                 |
+| **Monitoring**    | `pm2 monit` — CPU/memory per process                                |
+
+### PM2 Commands
+
+```bash
+pm2 start ecosystem.config.js          # Start all apps
+pm2 restart ecosystem.config.js        # Restart all apps
+pm2 restart backend                    # Restart single app
+pm2 stop backend                       # Stop single app
+pm2 status                             # List app status
+pm2 logs                               # Tail all logs
+pm2 logs backend                       # Tail backend logs
+pm2 save                               # Save process list
+pm2 startup systemd                    # Enable auto-start on boot
+```
+
+### Env File Location
+
+On the VPS, `/etc/orivastra.env` contains both infrastructure and application environment variables:
+
+```bash
+# Database
+DATABASE_URL=postgresql://orivastra:CHANGE_ME@localhost:5432/orivastra
+POSTGRES_PASSWORD=CHANGE_ME
+
+# Cache
+REDIS_URL=redis://localhost:6379
+
+# Backend
+PORT=3001
+JWT_SECRET=CHANGE_ME
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://orivastra.com/api
+```
+
+---
+
+## Docker Infrastructure
+
+### Starting Services
+
+```bash
+# Production (PostgreSQL + Redis only)
+docker compose -f infrastructure/compose/compose.infrastructure.yml up -d
+
+# Development (with Adminer GUI)
+docker compose -f infrastructure/compose/compose.infrastructure.yml --profile dev up -d
+```
+
+### Stopping Services
+
+```bash
+docker compose -f infrastructure/compose/compose.infrastructure.yml down
+docker compose -f infrastructure/compose/compose.infrastructure.yml down -v   # Also delete volumes
+```
+
+### Backups
+
+```bash
+./infrastructure/scripts/backup-db.sh                    # Save to ./backups/
+./infrastructure/scripts/backup-db.sh /path/to/backup/   # Custom directory
+```
 
 ---
 
 ## Environment Files
 
-| File                      | Purpose                                                                 |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `.env.example`            | Template with all available keys. Safe to commit.                       |
-| `.env.development`        | Development defaults. Safe to commit (no real secrets).                 |
-| `.env.production.example` | Production template. Shows required keys with `CHANGE_ME` placeholders. |
-| `.env`                    | Actual production secrets. **NEVER committed.** Created on the VPS.     |
-
-**Adding a new environment variable:**
-
-1. Add it to `.env.example` with a placeholder value
-2. Add it to `.env.development` with a dev-appropriate default
-3. Add it to `.env.production.example` with instructions on how to generate it
-4. Never put real values in any committed file
-
----
-
-## Scripts — Overview
-
-Each script is a **single-purpose, independently callable building block.** This design enables future Hermes/OpenClaw integration without needing the AI to execute arbitrary shell commands.
-
-All scripts:
-
-- Use `set -euo pipefail` for strict error handling
-- Accept optional arguments for flexibility
-- Are designed to be called individually (not as a monolithic pipeline)
-- Include Hermes integration notes in comments
-
-| Script                | Purpose                                                    |
-| --------------------- | ---------------------------------------------------------- |
-| `deploy.sh`           | Pull latest code, rebuild images, restart services, verify |
-| `rollback.sh`         | Revert to a previous commit/tag after a failed deployment  |
-| `backup-db.sh`        | Create a timestamped PostgreSQL dump                       |
-| `health-check.sh`     | Verify all services are running and responding             |
-| `restart-backend.sh`  | Gracefully restart the backend container                   |
-| `restart-frontend.sh` | Gracefully restart the frontend container                  |
-| `show-logs.sh`        | Tail logs from one or all services                         |
-
----
-
-## Future Hermes / OpenClaw Integration
-
-Hermes is an AI DevOps agent. It will live on the VPS alongside the applications and manage infrastructure through a **trusted command pattern**:
-
-```
-Telegram (user message)
-    │
-    ▼
-Hermes (AI agent on VPS)
-    │
-    ├── Validates the request
-    ├── Determines which script to call
-    │
-    ▼
-Scripts/ (trusted, audited)
-    │
-    ├── deploy.sh
-    ├── rollback.sh
-    ├── backup-db.sh
-    ├── health-check.sh
-    ├── restart-backend.sh
-    ├── restart-frontend.sh
-    └── show-logs.sh
-    │
-    ▼
-Docker (container orchestration)
-    │
-    ▼
-Applications (running services)
-```
-
-**Key principle:** Hermes never executes arbitrary shell commands. It calls pre-defined, version-controlled scripts. Each script does one thing, logs its output, and returns a clear exit code. This makes the system auditable, testable, and safe for AI-driven operations.
-
-**Example future flow:**
-
-```
-User: "Deploy the latest version"
-  → Telegram → Hermes → backup-db.sh → deploy.sh → health-check.sh
-  → Hermes reports: "Deployed. Backend healthy, frontend healthy."
-```
+| File                                         | Purpose                                           |
+| -------------------------------------------- | ------------------------------------------------- |
+| `infrastructure/env/.env.example`            | Template for infrastructure vars. Safe to commit. |
+| `infrastructure/env/.env.development`        | Development defaults. Safe to commit.             |
+| `infrastructure/env/.env.production.example` | Production template. Safe to commit.              |
+| `apps/backend/.env.example`                  | Backend env vars template.                        |
+| `apps/frontend/.env.example`                 | Frontend env vars template.                       |
+| `/etc/orivastra.env` (VPS)                   | **Actual production secrets.** NEVER committed.   |
 
 ---
 
 ## Security Rules
 
-1. **Never commit `.env`.** It is in `.gitignore`.
-2. **Never hardcode secrets** in Dockerfiles, compose files, or scripts.
-3. **PostgreSQL and Redis never exposed publicly.** Only accessible via the internal Docker network.
-4. **Only ports 80, 443, and SSH open** on the VPS firewall.
-5. **Scripts run as a dedicated user**, not root.
-6. **Database backups are encrypted** before storage (future).
+1. **Never commit `/etc/orivastra.env`** or any `.env` file with real secrets. They are in `.gitignore`.
+2. **PostgreSQL and Redis** are exposed to the host machine (`localhost`). Host firewall should block external access to ports 5432 and 6379.
+3. **Adminer** is a development-only service (Docker profile `dev`). Never run it in production.
+4. **Applications** run as the Linux user who owns the project directory, not as root.
+5. **PM2** runs under a dedicated Linux user (future: create `orivastra` system user).
 
 ---
 
-## Current State (v0.1)
+## Legacy Dockerfiles
 
-- [x] Docker Compose files: dev, prod, ai (compose/)
-- [x] Multi-stage Dockerfiles: frontend, backend, hermes (dockerfiles/)
-- [x] Nginx reverse proxy configuration
-- [x] Environment variable templates (dev, prod, example)
-- [x] Operational scripts (7 scripts with Hermes integration notes)
+The Dockerfiles in `infrastructure/legacy/dockerfiles/` are preserved for future use. They were used when applications were fully containerized. The current deployment strategy does NOT use them.
+
+To reactivate them:
+
+1. Move them back to `infrastructure/dockerfiles/`
+2. Update compose files to reference the Docker targets
+3. Switch PM2 processes back to `docker compose` commands
+
+---
+
+## Long-Term Vision — Hermes Integration
+
+The future architecture aims for AI-driven operations through Hermes:
+
+```
+Telegram
+    │
+    ▼
+Hermes (AI agent on VPS)
+    │
+    ├── Validates user request
+    ├── Determines trusted script to call
+    │
+    ▼
+Scripts/ (audited, version-controlled)
+    │
+    ├── deploy-backend.sh
+    ├── deploy-frontend.sh
+    ├── restart-all.sh
+    ├── health-check.sh
+    ├── backup-db.sh
+    └── rollback.sh
+    │
+    ▼
+PM2 (application orchestration) → Docker (infrastructure) → Production
+
+---
+
+Backend Deployment Service (NestJS endpoint, future):
+- Hermes calls a secure REST endpoint
+- Backend validates permissions and executes the trusted script
+- Result is returned as JSON
+- Hermes reports to the user via Telegram
+```
+
+**Key principle:** Hermes never executes arbitrary shell commands. It calls pre-defined, version-controlled scripts that are auditable, testable, and safe.
+
+---
+
+## Current State (v0.2)
+
+- [x] Compose infrastructure file (PostgreSQL, Redis, Adminer)
+- [x] Nginx reverse proxy configuration (localhost upstreams)
+- [x] Environment variable templates (infra + apps)
+- [x] PM2 ecosystem configuration (ecosystem.config.js)
+- [x] Deployment scripts (per-app: deploy, restart, health check)
+- [x] Backup and rollback scripts
+- [x] Legacy Dockerfiles preserved
 - [ ] SSL/TLS certificates (Let's Encrypt + Certbot)
-- [ ] Monitoring stack (Prometheus + Grafana)
 - [ ] Redis custom configuration
-- [ ] Automated backup rotation
-- [ ] GitHub Actions CI/CD deployment pipeline
+- [ ] Database backup rotation
+- [ ] GitHub Actions CI/CD pipeline
 - [ ] Hermes/OpenClaw agent
+- [ ] Monitoring stack (Prometheus + Grafana)

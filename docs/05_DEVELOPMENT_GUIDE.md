@@ -406,15 +406,28 @@ Never access the database directly from controllers.
 
 # 10. Docker Standards
 
-Each application should have its own Dockerfile.
+## Hybrid Architecture
 
-Development and production configurations should be separated.
+Docker is responsible only for infrastructure services:
+
+- PostgreSQL
+- Redis
+- Adminer (development only)
+
+## Application Standards
+
+Applications run natively on the host via PM2:
+
+- Frontend: `pm2 start ecosystem.config.js --only frontend`
+- Backend: `pm2 start ecosystem.config.js --only backend`
+
+## Docker Compose
+
+Infrastructure services are defined in `infrastructure/compose/compose.infrastructure.yml`.
+
+All environment variables for Docker services come from `infrastructure/env/`.
 
 Never hardcode secrets.
-
-Use .env files.
-
-Keep images lightweight.
 
 ---
 
@@ -472,7 +485,19 @@ VPS
 
 ↓
 
-Docker Compose
+git pull
+
+↓
+
+pnpm install
+
+↓
+
+turbo build
+
+↓
+
+PM2 Restart (applications) + Docker Compose (infrastructure)
 
 ```
 

@@ -7,12 +7,17 @@
 // Env file: /etc/orivastra.env contains secrets
 // and per-environment overrides (not committed).
 //
+// Logs: /opt/orivastra/logs/<name>.{err,out}.log
+//   Create the directory: mkdir -p /opt/orivastra/logs
+//
 // Usage:
 //   pm2 start ecosystem.config.js
 //   pm2 restart ecosystem.config.js
 //   pm2 logs
 //   pm2 save && pm2 startup   (enable auto-start on boot)
 // ──────────────────────────────────────────────
+
+const LOG_DIR = '/opt/orivastra/logs';
 
 module.exports = {
   apps: [
@@ -28,7 +33,8 @@ module.exports = {
       },
       env_file: '/etc/orivastra.env',
       kill_timeout: 5000,
-      error_file: './logs/backend.err.log',
+      error_file: LOG_DIR + '/backend.err.log',
+      out_file: LOG_DIR + '/backend.out.log',
       merge_logs: true,
     },
     {
@@ -44,7 +50,8 @@ module.exports = {
       },
       env_file: '/etc/orivastra.env',
       kill_timeout: 5000,
-      error_file: './logs/frontend.err.log',
+      error_file: LOG_DIR + '/frontend.err.log',
+      out_file: LOG_DIR + '/frontend.out.log',
       merge_logs: true,
     },
   ],

@@ -25,4 +25,4 @@ jobs:
 
       - run: pnpm lint
 
-      - run: turbo build
+      - run: pnpm run build

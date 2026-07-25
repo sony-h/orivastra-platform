@@ -29,7 +29,6 @@ module.exports = {
       env_file: '/etc/orivastra.env',
       kill_timeout: 5000,
       error_file: './logs/backend.err.log',
-      out_file: './logs/backend.out.log',
       merge_logs: true,
     },
     {
@@ -46,7 +45,6 @@ module.exports = {
       env_file: '/etc/orivastra.env',
       kill_timeout: 5000,
       error_file: './logs/frontend.err.log',
-      out_file: './logs/frontend.out.log',
       merge_logs: true,
     },
   ],

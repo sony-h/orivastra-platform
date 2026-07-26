@@ -63,6 +63,12 @@ export const services: ServiceItem[] = [
     description:
       'Technical strategy, architecture design, technology selection, and engineering best practices.',
   },
+  {
+    icon: 'Shield',
+    title: 'Cybersecurity',
+    description:
+      'Security assessments, penetration testing, compliance auditing, and robust defense strategies to protect your digital assets.',
+  },
 ];
 
 export const technologies: TechnologyCategory[] = [

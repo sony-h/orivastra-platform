@@ -81,7 +81,7 @@ export function ContactSection() {
       <div className="mt-16 grid gap-12 lg:grid-cols-2">
         <Reveal direction="left">
           {state.success ? (
-            <div className="bg-card animate-in fade-in flex flex-col items-center justify-center rounded-xl border p-12 text-center transition-all duration-500">
+            <div className="bg-card animate-in fade-in flex flex-col items-center justify-center rounded-xl border p-8 text-center transition-all duration-500 sm:p-12">
               <div className="flex size-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle2 className="size-8 text-green-600" />
               </div>
@@ -95,7 +95,7 @@ export function ContactSection() {
               onSubmit={(e) => {
                 void handleSubmit(e);
               }}
-              className="bg-card space-y-5 rounded-xl border p-6"
+              className="bg-card space-y-5 rounded-xl border p-8 sm:p-10"
             >
               <div>
                 <Label htmlFor="name">Name</Label>
@@ -157,7 +157,7 @@ export function ContactSection() {
             {contactItems.map((item, i) => {
               const Icon = item.icon;
               const content = (
-                <div className="hover:border-accent/30 bg-card group flex items-start gap-4 rounded-lg border p-4 transition-all duration-200 hover:shadow-sm">
+                <div className="hover:border-accent/30 bg-card group flex items-start gap-4 rounded-lg border p-5 transition-all duration-200 hover:shadow-sm">
                   <div className="bg-accent/10 group-hover:bg-accent/20 flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors">
                     <Icon className="text-accent size-5 transition-transform group-hover:scale-110" />
                   </div>

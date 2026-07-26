@@ -15,7 +15,7 @@ export function ProcessSection() {
       </Reveal>
 
       <div className="relative mx-auto mt-16 max-w-3xl">
-        <div className="bg-border absolute left-4 top-0 h-full w-px lg:left-1/2 lg:-translate-x-px" />
+        <div className="bg-border absolute left-5 top-0 h-full w-px lg:left-1/2 lg:-translate-x-px" />
 
         {processSteps.map((step, i) => {
           const isEven = i % 2 === 0;
@@ -26,7 +26,9 @@ export function ProcessSection() {
                   isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'
                 }`}
               >
-                <div className={`flex-1 ${isEven ? 'lg:pr-12 lg:text-right' : 'lg:pl-12'}`}>
+                <div
+                  className={`flex-1 pl-7 lg:pl-0 ${isEven ? 'lg:pr-12 lg:text-right' : 'lg:pl-12'}`}
+                >
                   <h3 className="text-lg font-semibold">{step.title}</h3>
                   <p className="text-muted-foreground mt-1 text-sm">{step.description}</p>
                 </div>

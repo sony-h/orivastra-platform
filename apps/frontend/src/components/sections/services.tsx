@@ -31,7 +31,7 @@ export function ServicesSection() {
           const Icon = iconMap[service.icon] ?? Code2;
           return (
             <Reveal key={service.title} delay={i * 0.1}>
-              <Card className="hover:border-primary/30 group flex flex-col p-6 transition-all duration-200 hover:scale-[1.02] hover:shadow-md">
+              <Card className="hover:border-primary/30 group flex flex-col p-6 transition-all duration-200 hover:scale-[1.02] hover:shadow-md sm:p-8">
                 <div className="bg-accent/10 flex size-12 items-center justify-center rounded-lg">
                   <Icon className="text-accent size-6" />
                 </div>

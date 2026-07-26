@@ -1,8 +1,12 @@
-name: Deploy
+name: Deploy (Manual)
 
 on:
-  push:
-    branches: [main]
+  # Automatic deploys are handled by VPS polling:
+  # infrastructure/scripts/setup/poll-deploy.sh + systemd timer
+  #
+  # This workflow exists for manual emergency deploys
+  # from the GitHub Actions UI (requires SSH access).
+  workflow_dispatch:
 
 jobs:
   deploy:

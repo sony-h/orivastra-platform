@@ -211,6 +211,53 @@ Production
 
 ---
 
+## VPS Auto-Deploy Polling
+
+Instead of GitHub Actions SSH-ing into the VPS, the VPS polls GitHub for changes every 60 seconds.
+
+### Architecture
+
+```
+You push to main
+    ↓
+CI runs (ci.yml) — validates PR
+    ↓
+PR merges
+    ↓
+VPS polls every 60s:
+  git fetch → local != remote? → git pull → deploy-all.sh
+```
+
+### One-time setup
+
+```bash
+sudo bash infrastructure/scripts/setup/setup-polling.sh
+```
+
+This creates two systemd units:
+
+| Unit                       | Type    | Purpose                        |
+| -------------------------- | ------- | ------------------------------ |
+| `orivastra-deploy.service` | oneshot | Runs `poll-deploy.sh`          |
+| `orivastra-deploy.timer`   | timer   | Triggers the service every 60s |
+
+### Verify
+
+```bash
+systemctl status orivastra-deploy.timer
+journalctl -u orivastra-deploy.service -n 20 --no-pager
+```
+
+### Manual trigger
+
+```bash
+bash infrastructure/scripts/setup/poll-deploy.sh --force
+```
+
+This runs a deploy even if no new commits are detected.
+
+---
+
 ## Security
 
 - Scripts should be executed by the project's Linux user (not root), unless they explicitly require root (detected and noted).

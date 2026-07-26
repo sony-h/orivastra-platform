@@ -23,7 +23,7 @@ readonly CYAN='\033[0;36m'
 readonly NC='\033[0m' # No Color
 
 # ── Project Paths ────────────────────────────
-readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 readonly INFRA_DIR="$PROJECT_ROOT/infrastructure"
 readonly SCRIPTS_DIR="$INFRA_DIR/scripts"
 readonly COMPOSE_FILE="$INFRA_DIR/compose/compose.infrastructure.yml"

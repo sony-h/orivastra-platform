@@ -1,0 +1,19 @@
+# Shell scripts — force LF line endings and preserve executable bit
+*.sh text eol=lf
+
+# TypeScript/JavaScript
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+
+# Config
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+
+# Markdown
+*.md text eol=lf
+
+# Lockfile — binary (pnpm manages it)
+pnpm-lock.yaml -text

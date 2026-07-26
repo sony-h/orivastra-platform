@@ -41,7 +41,7 @@ pnpm install --frozen-lockfile
 success "Dependencies installed."
 
 info "Building backend..."
-turbo build --filter="$BACKEND_FILTER"
+pnpm exec turbo build --filter="$BACKEND_FILTER"
 success "Backend built."
 
 pm2_restart_backend

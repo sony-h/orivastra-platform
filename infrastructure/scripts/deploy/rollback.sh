@@ -35,11 +35,11 @@ info "=== Rollback ==="
 git_revert_to "${1:-HEAD~1}"
 
 info "Rebuilding backend..."
-turbo build --filter="$BACKEND_FILTER"
+pnpm exec turbo build --filter="$BACKEND_FILTER"
 success "Backend rebuilt."
 
 info "Rebuilding frontend..."
-turbo build --filter="$FRONTEND_FILTER"
+pnpm exec turbo build --filter="$FRONTEND_FILTER"
 success "Frontend rebuilt."
 
 pm2_restart_all

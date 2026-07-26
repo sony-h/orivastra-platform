@@ -39,7 +39,7 @@ pnpm install --frozen-lockfile
 success "Dependencies installed."
 
 info "Building frontend..."
-turbo build --filter="$FRONTEND_FILTER"
+pnpm exec turbo build --filter="$FRONTEND_FILTER"
 success "Frontend built."
 
 pm2_restart_frontend

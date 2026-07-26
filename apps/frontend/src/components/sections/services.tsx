@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Code2, Cloud, Brain, RefreshCw, Lightbulb, Shield } from 'lucide-react';
+import { Code2, Cloud, Brain, RefreshCw, Lightbulb } from 'lucide-react';
 import { Card } from '@orivastra/ui';
 import { SectionWrapper } from '@/components/ui/section-wrapper';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -12,7 +12,6 @@ const iconMap: Record<string, React.ElementType> = {
   Brain,
   RefreshCw,
   Lightbulb,
-  Shield,
 };
 
 export function ServicesSection() {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, MapPin, Github, Linkedin, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Mail, MapPin, Github, Linkedin, Send } from 'lucide-react';
 import { Button, Input, Textarea, Label } from '@orivastra/ui';
 import { SectionWrapper } from '@/components/ui/section-wrapper';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -21,9 +21,6 @@ const contactItems = [
   { icon: Linkedin, label: 'LinkedIn', value: 'Orivastra', href: contactInfo.linkedin },
   { icon: Send, label: 'Telegram', value: '@orivastra', href: contactInfo.telegram },
 ];
-
-const inputClass =
-  'mt-1.5 focus-visible:ring-2 focus-visible:ring-accent/50 transition-all duration-200';
 
 export function ContactSection() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
@@ -81,9 +78,9 @@ export function ContactSection() {
       <div className="mt-16 grid gap-12 lg:grid-cols-2">
         <Reveal direction="left">
           {state.success ? (
-            <div className="bg-card animate-in fade-in flex flex-col items-center justify-center rounded-xl border p-12 text-center transition-all duration-500">
+            <div className="bg-card flex flex-col items-center justify-center rounded-xl border p-12 text-center">
               <div className="flex size-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle2 className="size-8 text-green-600" />
+                <Mail className="size-8 text-green-600" />
               </div>
               <h3 className="mt-6 text-xl font-semibold">Message Sent!</h3>
               <p className="text-muted-foreground mt-2">
@@ -95,7 +92,7 @@ export function ContactSection() {
               onSubmit={(e) => {
                 void handleSubmit(e);
               }}
-              className="bg-card space-y-5 rounded-xl border p-6"
+              className="space-y-5"
             >
               <div>
                 <Label htmlFor="name">Name</Label>
@@ -104,7 +101,7 @@ export function ContactSection() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Your name"
-                  className={inputClass}
+                  className="mt-1.5"
                 />
                 {errors.name && <p className="text-destructive mt-1 text-sm">{errors.name}</p>}
               </div>
@@ -116,7 +113,7 @@ export function ContactSection() {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="you@example.com"
-                  className={inputClass}
+                  className="mt-1.5"
                 />
                 {errors.email && <p className="text-destructive mt-1 text-sm">{errors.email}</p>}
               </div>
@@ -128,25 +125,15 @@ export function ContactSection() {
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                   placeholder="Tell us about your project..."
-                  className={inputClass}
+                  className="mt-1.5"
                 />
                 {errors.message && (
                   <p className="text-destructive mt-1 text-sm">{errors.message}</p>
                 )}
               </div>
               {state.error && <p className="text-destructive text-sm">{state.error}</p>}
-              <Button type="submit" disabled={state.loading} className="w-full gap-2">
-                {state.loading ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="size-4" />
-                    Send Message
-                  </>
-                )}
+              <Button type="submit" disabled={state.loading} className="w-full">
+                {state.loading ? 'Sending...' : 'Send Message'}
               </Button>
             </form>
           )}
@@ -157,9 +144,9 @@ export function ContactSection() {
             {contactItems.map((item, i) => {
               const Icon = item.icon;
               const content = (
-                <div className="hover:border-accent/30 bg-card group flex items-start gap-4 rounded-lg border p-4 transition-all duration-200 hover:shadow-sm">
-                  <div className="bg-accent/10 group-hover:bg-accent/20 flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors">
-                    <Icon className="text-accent size-5 transition-transform group-hover:scale-110" />
+                <div className="hover:bg-accent/5 flex items-start gap-4 rounded-lg border p-4 transition-colors">
+                  <div className="bg-accent/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
+                    <Icon className="text-accent size-5" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{item.label}</p>

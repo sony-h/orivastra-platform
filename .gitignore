@@ -53,3 +53,4 @@ logs/
 
 # pnpm store (generated, not part of project)
 .pnpm-store/
+backups/
